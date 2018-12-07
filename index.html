@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>GTD - BD18</title>
+  <meta charset="utf-8">
+  <script src="https://cdn.polyfill.io/v2/polyfill.min.js"></script>
+  <script src="lib/d3.min.js"></script>
+  <style type="text/css">
+    body {
+      width: 100vw;
+      margin: 25px auto;
+      font-family: "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+    }
+    rect {
+      fill: steelblue;
+      fill-opacity: 0.8;
+    }
+    rect:hover {
+      fill-opacity: 1;
+    }
+    path {
+      fill-opacity: 0.8;
+    }
+    .selected,
+    path:hover {
+      fill-opacity: 1;
+    }
+    .axis {
+      font-size: smaller;
+    }
+    main {
+      display: flex;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+  <article>
+      <header>
+        <h1>Global Terrorism Database Analysis</h1>
+      </header>
+      <p>If there's a microphone anywhere near you, assume it's hot and
+      sending whatever you're saying to the world. Seriously.</p>
+      <p>...</p>
+      <section>
+        <h1>Data overview</h1>
+        <p>I am a paragraph without any real meaning, maybe next time put just some emoji, little bastard.</p>
+        <p><svg id="overview"></svg></p>
+      </section>
+  </article>
+  <script type="text/javascript">
+
+  const state ={
+      data: [],
+      passengerClass: "",
+      selectedSex: null,
+      survived:null
+      // TODO store selected survived state
+    };
+
+  d3.tsv('gtd1417.csv').then((parsed) => {
+      state.data = parsed.map((row) => {
+        row.eventid = parseInt(row.eventid);
+        row.country = parseFloat(row.country);
+        return row;
+      });
+
+      updateApp();
+    });
+
+  function updateApp() {
+    alert("Fetched");
+    createOverviewChart('#overview')
+  }
+
+  function createOverviewChart(element_id){
+    const svg = d3.select(element_id);
+      
+    const g = svg.append('g')
+      .attr('transform', `translate(120,40)`);
+
+    const rect = g.selectAll('rect').data(state.data, (s) => s.country);
+
+    const rect_enter = rect.enter().append('rect').attr('x',0);
+    rect_enter.append('title');
+
+    // ENTER + UPDATE
+    // both old and new elements
+    rect.merge(rect_enter).transition()
+      .attr('height', 10)
+      .attr('width', 10)
+      .attr('y', (d, i) => i*(10+5));
+    rect.merge(rect_enter).select('title').text((d) => d.country);
+
+    // EXIT
+    // elements that aren't associated with data
+    rect.exit().remove();
+  }
+  </script>
+</body>
+</html>
