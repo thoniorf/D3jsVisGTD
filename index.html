@@ -51,10 +51,7 @@
   <script type="text/javascript">
 
   const state ={
-      data: [],
-      passengerClass: "",
-      selectedSex: null,
-      survived:null
+      data: []
       // TODO store selected survived state
     };
 
@@ -65,32 +62,62 @@
         return row;
       });
 
+      //console.log(state.data)
       updateApp();
     });
 
   function updateApp() {
-    alert("Fetched");
+    console.log("Data source fetched")
     createOverviewChart('#overview')
   }
 
   function createOverviewChart(element_id){
-    const svg = d3.select(element_id);
-      
-    const g = svg.append('g')
-      .attr('transform', `translate(120,40)`);
+    const margin = {top: 40, bottom: 10, left: 120, right: 20};
+    const width = 1200 - margin.left - margin.right;
+    const height = 1600 - margin.top - margin.bottom;
 
-    const rect = g.selectAll('rect').data(state.data, (s) => s.country);
+    var nestedStateData = d3.nest()
+                        .key((d) => d.country_txt)
+                        .entries(state.data);
 
-    const rect_enter = rect.enter().append('rect').attr('x',0);
+    const scale = d3.scaleBand()
+                    .range([0,height])
+                    .padding(0.2)
+                    .domain(nestedStateData.map(function(d) { 
+                      return d.key; 
+                      }));
+    var maxLength = 0;
+    nestedStateData.forEach(element => {
+      maxLength = (maxLength<element.values.length)?element.values.length:maxLength;
+    });
+    console.log(maxLength);
+    const xscale = d3.scaleLinear().range([0,width]).domain([0,maxLength]);
+    const axis = d3.axisLeft().scale(scale);
+    const xaxis = d3.axisTop().scale(xscale);
+  
+    const g = d3.select(element_id)
+                  .attr('width', width+margin.left+margin.right)
+                  .attr('height', height+margin.top+margin.bottom)
+                  .append('g')
+                  .attr('transform', `translate(${margin.left},${margin.top})`)
+    const g_axis = g.append('g').attr('transform', 'translate(-10,0)').attr('class','y axis');
+    const g_x_axis = g.append('g').attr('transform', 'translate(0,-10)').attr('class','x axis');
+    g_axis.call(axis);                  
+    g_x_axis.call(xaxis);
+
+    const rect = g.selectAll('rect').data(nestedStateData, (d) => d.key);
+
+    const rect_enter = rect.enter().append('rect').attr('x', 0);
     rect_enter.append('title');
 
     // ENTER + UPDATE
     // both old and new elements
-    rect.merge(rect_enter).transition()
-      .attr('height', 10)
-      .attr('width', 10)
-      .attr('y', (d, i) => i*(10+5));
-    rect.merge(rect_enter).select('title').text((d) => d.country);
+    console.log(nestedStateData);
+    rect.merge(rect_enter)
+    .attr('width',(d) => xscale(d.values.length))
+    .attr('height',scale.bandwidth())
+    .attr('y',(d) => scale(d.key))
+    .select('title').text((d) => d.values.length);
 
     // EXIT
     // elements that aren't associated with data
