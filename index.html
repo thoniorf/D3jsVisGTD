@@ -66,15 +66,15 @@
       });
       console.log(state.data);
       //console.log(state.data)
+      fillWeaponFilter('#weapfilter');
       updateApp();
     });
 
   function updateApp() {
-    console.log("Data source fetched")
+    console.log("Data source fetched");
     state.data = filterData();
-    fillWeaponFilter('#weapfilter')
-    createOverviewChart('#overview')
-    createWeaponTypeChart('#weapontype')
+    createOverviewChart('#overview');
+    createWeaponTypeChart('#weapontype');
   }
   function filterData(){
     return state.data.filter((d) => {
@@ -103,7 +103,7 @@
                         .key((d) => d.country_txt)
                         .entries(state.data);
 
-    const scale = d3.scaleBand()
+    var scale = d3.scaleBand()
                     .range([0,height])
                     .padding(0.2)
                     .domain(nestedStateData.map(function(d) { 
@@ -114,35 +114,34 @@
       maxLength = (maxLength<element.values.length)?element.values.length:maxLength;
     });
     console.log(maxLength);
-    const xscale = d3.scaleLinear().range([0,width]).domain([0,maxLength]);
-    const axis = d3.axisLeft().scale(scale);
-    const xaxis = d3.axisTop().scale(xscale);
+    var xscale = d3.scaleLinear().range([0,width]).domain([0,maxLength]);
+    var axis = d3.axisLeft().scale(scale);
+    var xaxis = d3.axisTop().scale(xscale);
   
-    const g = d3.select(element_id)
+    var g = d3.select(element_id)
                   .attr('width', width+margin.left+margin.right)
                   .attr('height', height+margin.top+margin.bottom)
                   .append('g')
                   .attr('transform', `translate(${margin.left},${margin.top})`);
                   
                   
-    const g_axis = g.append('g').attr('transform', 'translate(-10,0)').attr('class','y axis');
-    const g_x_axis = g.append('g').attr('transform', 'translate(0,-10)').attr('class','x axis');
+    var g_axis = g.append('g').attr('transform', 'translate(-10,0)').attr('class','y axis');
+    var g_x_axis = g.append('g').attr('transform', 'translate(0,-10)').attr('class','x axis');
     g_axis.call(axis);                  
     g_x_axis.call(xaxis);
 
-    const rect = g.selectAll('rect').data(nestedStateData, (d) => d.key);
+    var rect = g.selectAll('rect').data(nestedStateData, (d) => d.key);
 
-    const text = g.selectAll('text').data(nestedStateData, (d) => d.key)
-                                      .enter()
-                                      .append('text')
-                                      //.style('')
-                                      .attr('class','bar')
-                                      .attr('x', (d) => xscale(d.values.length))
-                                      .attr('y',(d) => scale(d.key)+8)
-                                      .text((d) => d.values.length);
+    var text = g.selectAll('text').data(nestedStateData, (d) => d.key).enter()
+                  .append('text')
+                  //.style('')
+                  .attr('class','bar')
+                  .attr('x', (d) => xscale(d.values.length))
+                  .attr('y',(d) => scale(d.key)+8)
+                  .text((d) => d.values.length);
      
 
-    const rect_enter = rect.enter().append('rect').attr('x', 0);
+    var rect_enter = rect.enter().append('rect').attr('x', 0);
     rect_enter.append('title');
 
     // ENTER + UPDATE
@@ -153,7 +152,6 @@
     .attr('height',scale.bandwidth())
     .attr('y',(d) => scale(d.key))
     .select('title').text((d) => d.values.length);
-
     // EXIT
     // elements that aren't associated with data
     rect.exit().remove();
@@ -168,7 +166,7 @@
                         .key((d) => d.weaptype1_txt)
                         .entries(state.data);
 
-    const scale = d3.scaleBand()
+    var scale = d3.scaleBand()
                     .range([0,height])
                     .padding(0.2)
                     .domain(nestedStateData.map(function(d) { 
@@ -178,28 +176,25 @@
     nestedStateData.forEach(element => {
       maxLength = (maxLength<element.values.length)?element.values.length:maxLength;
     });
-    const xscale = d3.scaleLinear().range([0,width]).domain([0,maxLength]);
-    const axis = d3.axisLeft().scale(scale);
-    const xaxis = d3.axisTop().scale(xscale);
+    var xscale = d3.scaleLinear().range([0,width]).domain([0,maxLength]);
+    var axis = d3.axisLeft().scale(scale);
+    var xaxis = d3.axisTop().scale(xscale);
   
-    const g = d3.select(element_id)
+    var g = d3.select(element_id)
                   .attr('width', width+margin.left+margin.right)
                   .attr('height', height+margin.top+margin.bottom)
                   .append('g')
                   .attr('transform', `translate(${margin.left},${margin.top})`);
                   
                   
-    const g_axis = g.append('g').attr('transform', 'translate(-10,0)').attr('class','y axis');
-    const g_x_axis = g.append('g').attr('transform', 'translate(0,-10)').attr('class','x axis');
+    var g_axis = g.append('g').attr('transform', 'translate(-10,0)').attr('class','y axis');
+    var g_x_axis = g.append('g').attr('transform', 'translate(0,-10)').attr('class','x axis');
     g_axis.call(axis);                  
     g_x_axis.call(xaxis);
 
-    const rect = g.selectAll('rect').data(nestedStateData, (d) => d.key);
+    var rect = g.selectAll('rect').data(nestedStateData, (d) => d.key);
 
-     
-     
-
-    const rect_enter = rect.enter().append('rect').attr('x', 0);
+    var rect_enter = rect.enter().append('rect').attr('x', 0);
     rect_enter.append('title');
 
     // ENTER + UPDATE
@@ -210,7 +205,7 @@
     .attr('y',(d) => scale(d.key))
     .select('title').text((d) => d.values.length);
     
-    const text = g.selectAll('text').data(nestedStateData, (d) => d.key)
+    var text = g.selectAll('text').data(nestedStateData, (d) => d.key)
                                       .enter()
                                       .append('text')
                                       //.style('')
@@ -226,7 +221,7 @@
   }
 
   d3.select('#weapfilter').on('change', function() {
-    const selected = d3.select(this).property('value');
+    var selected = d3.select(this).property('value');
     state.weaptype1 = selected;
     updateApp();
   });
