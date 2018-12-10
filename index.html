@@ -74,7 +74,7 @@
   function createOverviewChart(element_id){
     const margin = {top: 40, bottom: 10, left: 120, right: 20};
     const width = 1200 - margin.left - margin.right;
-    const height = 1600 - margin.top - margin.bottom;
+    const height = 3000 - margin.top - margin.bottom;
 
     var nestedStateData = d3.nest()
                         .key((d) => d.country_txt)
@@ -99,13 +99,25 @@
                   .attr('width', width+margin.left+margin.right)
                   .attr('height', height+margin.top+margin.bottom)
                   .append('g')
-                  .attr('transform', `translate(${margin.left},${margin.top})`)
+                  .attr('transform', `translate(${margin.left},${margin.top})`);
+                  
+                  
     const g_axis = g.append('g').attr('transform', 'translate(-10,0)').attr('class','y axis');
     const g_x_axis = g.append('g').attr('transform', 'translate(0,-10)').attr('class','x axis');
     g_axis.call(axis);                  
     g_x_axis.call(xaxis);
 
     const rect = g.selectAll('rect').data(nestedStateData, (d) => d.key);
+
+     const text = g.selectAll('text').data(nestedStateData, (d) => d.key)
+                                      .enter()
+                                      .append('text')
+                                      //.style('')
+                                      .attr('class','bar')
+                                      .attr('x', (d) => xscale(d.values.length))
+                                      .attr('y',(d) => scale(d.key)+8)
+                                      .text((d) => d.values.length);
+     
 
     const rect_enter = rect.enter().append('rect').attr('x', 0);
     rect_enter.append('title');
