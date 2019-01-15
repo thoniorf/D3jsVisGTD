@@ -54,8 +54,10 @@
       <h1>Data overview</h1>
       <p>I am a paragraph without any real meaning, maybe next time put just some emoji, little bastard.</p>
       <p><label for="weapfilter">Weapon Filter </label><select id="weapfilter"></select></p>
-      <p><svg id="overview"></svg></p>
-      <p><svg id="weapontype"></svg></p>
+      <svg id="overview"></svg>
+      <svg id="weapontype"></svg>
+      <svg id="timeline"></svg>
+      <svg id="pie"></svg>
     </section>
   </article>
   <script type="text/javascript">
@@ -71,23 +73,24 @@
         row.country = parseFloat(row.country);
         return row;
       });
-
       fillWeaponFilter('#weapfilter');
       updateApp();
     });
 
+    const attacksBarChar = createOverviewChart('#overview');
+    console.log(attacksBarChar);
     function updateApp() {
       console.log("Data source fetched");
-      state.data = filterData();
-      createOverviewChart('#overview');
-      //createWeaponTypeChart('#weapontype');
+      var data = filterData();
+      attacksBarChar(data);
     }
     function filterData() {
-      return state.data.filter((d) => {
-        if (state.weaptype1 && d.weaptype1_txt !== state.weaptype1)
-          return false;
-        return true;
-      });
+      if (!state.weaptype1) return state.data;
+      const filtered_data = state.data
+        .filter((d) => {
+          return d.weaptype1_txt === state.weaptype1
+        });
+      return filtered_data;
     }
     function fillWeaponFilter(element_id) {
       var nestedStateData = d3.nest()
@@ -100,145 +103,91 @@
         .attr('value', (d) => d.key)
         .text((d) => d.key);
     }
+
     function createOverviewChart(element_id) {
-      const margin = { top: 40, bottom: 10, left: 120, right: 20 };
-      const width = 500 + margin.left + margin.right;
-      const height = 300 + margin.top + margin.bottom;
+      const margin = { top: 10, bottom: 120, left: 80, right: 10 };
+      const width = 500;
+      const height = 300;
 
-      var nestedStateData = d3.nest()
-        .key(function (d) { return d.country_txt })
-        .rollup(function (leaves) { return leaves.length })
-        .entries(state.data)
-        .sort(function (a, b) {
-          return d3.descending(a.value, b.value);
-        }).filter(function (value, index, array) {
-          return index <= 10;
-        });
-
-      console.log(nestedStateData)
-
-      var countries = d3.nest()
-        .key(function (d) {
-          console.log(d.key)
-          return d.key;
-        })
-        .entries(nestedStateData);
-      //console.log(countries);
-      var scale = d3.scaleBand()
-        .range([0, height])
-        .padding(0.2)
-        .domain(nestedStateData.map(function (d) {
-          return d.key;
-        }));
-      var maxLength = 0;
-      nestedStateData.forEach(element => {
-        maxLength = (maxLength < element.values.length) ? element.values.length : maxLength;
-      });
-      console.log(maxLength);
-      var xscale = d3.scaleLinear().range([0, width]).domain([0, maxLength]);
-      var axis = d3.axisLeft().scale(scale);
-      var xaxis = d3.axisTop().scale(xscale);
-
-      var g = d3.select(element_id)
+      var svg = d3.select(element_id)
         .attr('width', width + margin.left + margin.right)
-        .attr('height', height + margin.top + margin.bottom)
-        .append('g')
+        .attr('height', height + margin.top + margin.bottom);
+
+      svg.append('text')
+        .attr('x', width / 2 + margin.left)
+        .attr('y', margin.top * 1.5)
+        .attr('text-anchor', 'middle')
+        .text('Top countries by attacks number')
+      svg.append('text')
+        .attr('x', -height / 2)
+        .attr('y', margin.right * 2)
+        .attr('text-anchor', 'middle')
+        .attr('transform', 'rotate(-90)')
+        .text('Attacks number')
+
+      var chart = svg.append('g')
         .attr('transform', `translate(${margin.left},${margin.top})`);
 
+      var yScale = d3.scaleLinear().range([height, 0]);
+      var xScale = d3.scaleBand()
+        .range([0, width])
+        .padding(0.02);
 
-      var g_axis = g.append('g').attr('transform', 'translate(-10,0)').attr('class', 'y axis');
-      var g_x_axis = g.append('g').attr('transform', 'translate(0,-10)').attr('class', 'x axis');
-      g_axis.call(axis);
-      g_x_axis.call(xaxis);
+      var yAxis = d3.axisLeft(yScale);
+      var xAxis = d3.axisBottom(xScale);
 
-      var rect = g.selectAll('rect').data(nestedStateData, (d) => d.key);
+      var yAxisNode = chart.append('g');
+      var xAxisNode = chart.append('g').attr('transform', `translate(0, ${height})`);
 
-      var text = g.selectAll('text').data(nestedStateData, (d) => d.key).enter()
-        .append('text')
-        //.style('')
-        .attr('class', 'bar')
-        .attr('x', (d) => xscale(d.values.length))
-        .attr('y', (d) => scale(d.key) + 8)
-        .text((d) => d.values.length);
+      function update(update_data) {
 
+        var t = d3.transition()
+          .duration(750);
 
-      var rect_enter = rect.enter().append('rect').attr('x', 0);
-      rect_enter.append('title');
+        var nestedStateData = d3.nest()
+          .key(function (d) { return d.country_txt })
+          .rollup(function (leaves) { return leaves.length })
+          .entries(update_data)
+          .sort(function (a, b) {
+            return d3.descending(a.value, b.value);
+          }).filter(function (value, index, array) {
+            return index <= 10;
+          });
+        console.log(nestedStateData)
+        var maxLength = d3.max(nestedStateData).value;
 
-      // ENTER + UPDATE
-      // both old and new elements
-      //console.log(nestedStateData);
-      rect.merge(rect_enter)
-        .attr('width', (d) => xscale(d.values.length))
-        .attr('height', scale.bandwidth())
-        .attr('y', (d) => scale(d.key))
-        .select('title').text((d) => d.values.length);
-      // EXIT
-      // elements that aren't associated with data
-      rect.exit().remove();
-      text.exit().remove();
-    }
-    function createWeaponTypeChart(element_id) {
-      const margin = { top: 40, bottom: 10, left: 400, right: 20 };
-      const width = 1200 - margin.left - margin.right;
-      const height = 500 - margin.top - margin.bottom;
-
-      var nestedStateData = d3.nest()
-        .key((d) => d.weaptype1_txt)
-        .entries(state.data);
-
-      var scale = d3.scaleBand()
-        .range([0, height])
-        .padding(0.2)
-        .domain(nestedStateData.map(function (d) {
+        yScale.domain([0, maxLength]);
+        xScale.domain(nestedStateData.map(function (d) {
           return d.key;
         }));
-      var maxLength = 0;
-      nestedStateData.forEach(element => {
-        maxLength = (maxLength < element.values.length) ? element.values.length : maxLength;
-      });
-      var xscale = d3.scaleLinear().range([0, width]).domain([0, maxLength]);
-      var axis = d3.axisLeft().scale(scale);
-      var xaxis = d3.axisTop().scale(xscale);
 
-      var g = d3.select(element_id)
-        .attr('width', width + margin.left + margin.right)
-        .attr('height', height + margin.top + margin.bottom)
-        .append('g')
-        .attr('transform', `translate(${margin.left},${margin.top})`);
+        yAxisNode.transition(t).call(yAxis);
+        xAxisNode.transition(t).call(xAxis);
+        xAxisNode.selectAll('text')
+          .style('text-anchor', 'start')
+          .attr('dx', 10)
+          .attr('dy', -5)
+          .attr('transform', 'rotate(90)');
 
 
-      var g_axis = g.append('g').attr('transform', 'translate(-10,0)').attr('class', 'y axis');
-      var g_x_axis = g.append('g').attr('transform', 'translate(0,-10)').attr('class', 'x axis');
-      g_axis.call(axis);
-      g_x_axis.call(xaxis);
+        var bars = chart.selectAll('rect').data(nestedStateData);
+        var bars_enter = bars.enter().append('rect')
+          .attr('x', (d) => xScale(d.key))
+          .attr('y', (d) => yScale(d.value))
+          .attr('height', (d) => height - yScale(d.value))
+          .attr('width', xScale.bandwidth());
 
-      var rect = g.selectAll('rect').data(nestedStateData, (d) => d.key);
+        bars.merge(bars).transition(t)
+          .attr('x', (d) => xScale(d.key))
+          .attr('y', (d) => yScale(d.value))
+          .attr('height', (d) => height - yScale(d.value))
+          .attr('width', xScale.bandwidth());
 
-      var rect_enter = rect.enter().append('rect').attr('x', 0);
-      rect_enter.append('title');
+        bars.exit().remove();
 
-      // ENTER + UPDATE
-      // both old and new elements
-      rect.merge(rect_enter)
-        .attr('width', (d) => xscale(d.values.length))
-        .attr('height', scale.bandwidth())
-        .attr('y', (d) => scale(d.key))
-        .select('title').text((d) => d.values.length);
+      }
 
-      var text = g.selectAll('text').data(nestedStateData, (d) => d.key)
-        .enter()
-        .append('text')
-        //.style('')
-        .attr('class', 'bar')
-        .attr('x', (d) => xscale(d.values.length))
-        .attr('y', (d) => scale(d.key) + 8)
-        .attr('transform', 'translate(-10,10)')
-        .text((d) => d.values.length);
-      // EXIT
-      // elements that aren't associated with data
-      rect.exit().remove();
-      text.exit().remove();
+      return update;
     }
 
     d3.select('#weapfilter').on('change', function () {
