@@ -32,6 +32,12 @@
       fill-opacity: 1;
     }
 
+    .line {
+      fill: none;
+      stroke: steelblue;
+      stroke-width: 3px;
+    }
+
     .axis {
       font-size: smaller;
     }
@@ -71,7 +77,7 @@
         <svg id="pie" class="chart"></svg>
         <svg id="timeline" class="chart"></svg>
         <svg id="attacks_chart" class="chart"></svg>
-        <svg id="weapontype" class="chart"></svg>
+        <svg id="targettype" class="chart"></svg>
       </div>
     </section>
   </article>
@@ -95,12 +101,16 @@
 
     const attacksBarChar = createOverviewChart('#attacks_chart');
     const pieChart = createPieChart('#pie');
+    const timeline = createTimeLine('#timeline')
+    const targetchart = createTargetChart('#targettype');
 
     function updateApp() {
       console.log("Data source fetched");
       var data = filterData();
       attacksBarChar(data);
       pieChart(data);
+      timeline(data);
+      targetchart(data);
     }
     function filterData() {
       if (!state.weaptype1) return state.data;
@@ -121,6 +131,7 @@
         .attr('value', (d) => d.key)
         .text((d) => d.key);
     }
+
 
     function createPieChart(element_id) {
       const margin = { top: 30, bottom: 10, left: 60, right: 10 };
@@ -197,6 +208,199 @@
 
       return update;
     }
+
+    function createTimeLine(element_id) {
+      const margin = { top: 20, bottom: 20, left: 80, right: 10 };
+      const width = 500;
+      const height = 300;
+      const radius = 4;
+
+      var svg = d3.select(element_id)
+        .style('min-width', width + margin.left + margin.right)
+        .style('min-heigt', height + margin.top + margin.bottom)
+        .attr('width', width + margin.left + margin.right)
+        .attr('height', height + margin.top + margin.bottom);
+
+      svg.append('text')
+        .attr('x', width / 2 + margin.left)
+        .attr('y', margin.top / 1.5)
+        .attr('text-anchor', 'middle')
+        .text('Attacks number timeline')
+
+      svg.append('text')
+        .attr('x', -height / 2)
+        .attr('y', margin.right * 2)
+        .attr('text-anchor', 'middle')
+        .attr('transform', 'rotate(-90)')
+        .text('Attacks number')
+
+      var chart = svg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`)
+
+      var yScale = d3.scaleLinear().range([height, 0])
+      var xScale = d3.scaleBand().range([0, width]).padding(1);
+
+      var yAxis = d3.axisLeft(yScale);
+      var xAxis = d3.axisBottom(xScale);
+
+      var yAxisNode = chart.append('g');
+      var xAxisNode = chart.append('g').attr('transform', `translate(0, ${height})`);
+
+      var line = d3.line().x((d) => xScale(d.key)).y((d) => yScale(d.value)).curve(d3.curveMonotoneX);
+
+      function update(new_data) {
+        var t = d3.transition()
+          .duration(750);
+
+        var nestedStateData = d3.nest()
+          .key(function (d) { return d.iyear })
+          .rollup(function (leaves) { return leaves.length })
+          .entries(new_data)
+          .sort(function (a, b) {
+            return d3.descending(a.value, b.value);
+          });
+        var maxLength = d3.max(nestedStateData).value;
+        console.log(nestedStateData)
+
+        yScale.domain([0, maxLength]);
+        xScale.domain(nestedStateData.map(function (d) {
+          return d.key;
+        }));
+
+        yAxisNode.transition(t).call(yAxis);
+        xAxisNode.transition(t).call(xAxis);
+        xAxisNode.selectAll('text')
+          .style('text-anchor', 'middle')
+
+        var lines = chart.selectAll('.line').data(nestedStateData)
+          .attr('class', 'line');
+
+
+        var lines_enter = lines.enter().append("path")
+          .attr("class", "line")
+          .attr("d", line(nestedStateData))
+          .style('stroke', 'steelblue');
+
+        lines.merge(lines_enter).transition(t)
+          .attr("d", line(nestedStateData))
+          .style('stroke', 'steelblue')
+
+        /* chart.append('path').datum(nestedStateData)
+          .attr('class', 'line')
+          // .style('stroke', 'steelblue')
+          .attr('d', line); */
+
+        var circles = chart.selectAll('circle').data(nestedStateData);
+        var circles_enter = circles.enter().append('circle')
+          .attr('class', 'circle')
+          .style('stroke', 'steelblue')
+          .style('fill', 'steelblue')
+          .attr('cx', (d) => xScale(d.key))
+          .attr('cy', (d) => yScale(d.value))
+          .attr('r', radius);
+
+        circles.merge(circles_enter).transition(t)
+          .attr('class', 'circle')
+          .style('stroke', 'steelblue')
+          .style('fill', 'steelblue')
+          .attr('cx', (d) => xScale(d.key))
+          .attr('cy', (d) => yScale(d.value))
+          .attr('r', radius);
+
+        lines.exit().remove()
+        circles.exit().remove();
+      }
+
+      return update;
+    }
+
+    function createTargetChart(element_id) {
+      const margin = { top: 10, bottom: 120, left: 80, right: 10 };
+      const width = 500;
+      const height = 300;
+
+      var svg = d3.select(element_id)
+        .style('min-width', width + margin.left + margin.right)
+        .style('min-heigt', height + margin.top + margin.bottom)
+        .attr('width', width + margin.left + margin.right)
+        .attr('height', height + margin.top + margin.bottom);
+
+      svg.append('text')
+        .attr('x', width / 2 + margin.left)
+        .attr('y', margin.top * 1.5)
+        .attr('text-anchor', 'middle')
+        .text('Top target types by attacks number')
+      svg.append('text')
+        .attr('x', -height / 2)
+        .attr('y', margin.right * 2)
+        .attr('text-anchor', 'middle')
+        .attr('transform', 'rotate(-90)')
+        .text('Attacks number')
+
+      var chart = svg.append('g')
+        .attr('transform', `translate(${margin.left},${margin.top})`);
+
+      var yScale = d3.scaleLinear().range([height, 0]);
+      var xScale = d3.scaleBand()
+        .range([0, width])
+        .padding(0.02);
+
+      var yAxis = d3.axisLeft(yScale);
+      var xAxis = d3.axisBottom(xScale);
+
+      var yAxisNode = chart.append('g');
+      var xAxisNode = chart.append('g').attr('transform', `translate(0, ${height})`);
+
+      function update(update_data) {
+
+        var t = d3.transition()
+          .duration(750);
+
+        var nestedStateData = d3.nest()
+          .key(function (d) { return d.target1 })
+          .rollup(function (leaves) { return leaves.length })
+          .entries(update_data)
+          .sort(function (a, b) {
+            return d3.descending(a.value, b.value);
+          }).filter(function (value, index, array) {
+            return index <= 10;
+          });
+        var maxLength = d3.max(nestedStateData).value;
+
+        yScale.domain([0, maxLength]);
+        xScale.domain(nestedStateData.map(function (d) {
+          return d.key;
+        }));
+
+        yAxisNode.transition(t).call(yAxis);
+        xAxisNode.transition(t).call(xAxis);
+        xAxisNode.selectAll('text')
+          .style('text-anchor', 'start')
+          .attr('dx', 10)
+          .attr('dy', -5)
+          .attr('transform', 'rotate(90)');
+
+
+        var bars = chart.selectAll('rect').data(nestedStateData);
+        var bars_enter = bars.enter().append('rect')
+          .attr('x', (d) => xScale(d.key))
+          .attr('y', (d) => yScale(d.value))
+          .attr('height', (d) => height - yScale(d.value))
+          .attr('width', xScale.bandwidth());
+
+        bars.merge(bars_enter).transition(t)
+          .attr('x', (d) => xScale(d.key))
+          .attr('y', (d) => yScale(d.value))
+          .attr('height', (d) => height - yScale(d.value))
+          .attr('width', xScale.bandwidth());
+
+        bars.exit().remove();
+
+      }
+
+      return update;
+    }
+
     function createOverviewChart(element_id) {
       const margin = { top: 10, bottom: 120, left: 80, right: 10 };
       const width = 500;
@@ -271,7 +475,7 @@
           .attr('height', (d) => height - yScale(d.value))
           .attr('width', xScale.bandwidth());
 
-        bars.merge(bars).transition(t)
+        bars.merge(bars_enter).transition(t)
           .attr('x', (d) => xScale(d.key))
           .attr('y', (d) => yScale(d.value))
           .attr('height', (d) => height - yScale(d.value))
