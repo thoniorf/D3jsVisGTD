@@ -86,6 +86,7 @@
     d3.tsv('gtd1417.csv').then((parsed) => {
       state.data = parsed.map((row) => {
         row.country = parseFloat(row.country);
+        row.success = parseInt(row.success);
         return row;
       });
       fillWeaponFilter('#weapfilter');
@@ -93,11 +94,13 @@
     });
 
     const attacksBarChar = createOverviewChart('#attacks_chart');
-    console.log(attacksBarChar);
+    const pieChart = createPieChart('#pie');
+
     function updateApp() {
       console.log("Data source fetched");
       var data = filterData();
       attacksBarChar(data);
+      pieChart(data);
     }
     function filterData() {
       if (!state.weaptype1) return state.data;
@@ -119,6 +122,81 @@
         .text((d) => d.key);
     }
 
+    function createPieChart(element_id) {
+      const margin = { top: 30, bottom: 10, left: 60, right: 10 };
+      const width = 300;
+      const height = 300;
+      const radius = Math.min(width, height) / 2;
+
+      var svg = d3.select(element_id)
+        .style('min-width', width + margin.left + margin.right)
+        .style('min-heigt', height + margin.top + margin.bottom)
+        .attr('width', width + margin.left + margin.right)
+        .attr('height', height + margin.top + margin.bottom);
+
+      svg.append('text')
+        .attr('x', (width / 2) + margin.left)
+        .attr('y', margin.top / 2)
+        .attr('text-anchor', 'middle')
+        .text('Successful and Unsuccessfull attacks number');
+
+      var chart = svg.append('g')
+        .attr('transform', `translate(${width / 2 + margin.left},${height / 2 + margin.top})`);
+
+      var pie = d3.pie().value((d) => d.value).sortValues(null).sort(null);
+      var arc = d3.arc().outerRadius(radius).innerRadius(0);
+      var pieColors = d3.scaleOrdinal(d3.schemeSet3.slice(2));
+
+      function update(new_data) {
+
+        console.log(new_data)
+        var nestedStateData = d3.nest()
+          .key(function (d) {
+            return (d.success) ? "Successful" : "Unsuccessful";
+          })
+          .rollup(function (leaves) { return leaves.length })
+          .entries(new_data)
+          .sort(function (a, b) {
+            return d3.descending(a.value, b.value);
+          }).filter(function (value, index, array) {
+            return index < 10;
+          });
+
+        console.log(nestedStateData);
+
+        var pied = pie(nestedStateData);
+
+        pieColors.domain(nestedStateData.map((d) => d.key));
+
+        var old = chart.selectAll('path').data();
+        var path = chart.selectAll('path')
+          .data(pied, (d) => d.key);
+
+        var path_enter = path.enter().append('path')
+          .attr('class', 'arc')
+          .attr('d', arc)
+          .style('stroke', 'white');
+
+        path_enter.append('title');
+
+        function tweenArc(d, i) {
+          const interpolate = d3.interpolateObject(old[i], d);
+          return (t) => arc(interpolate(t));
+        }
+        path.merge(path_enter)
+          .transition()
+          .attrTween('d', tweenArc)
+          .style('fill', (d, i) => pieColors(i));
+
+        path.merge(path_enter).select('title')
+          .text(function (d) {
+            return `${d.data.key} : ${d.data.value}`;
+          });
+        path.exit().remove();
+      }
+
+      return update;
+    }
     function createOverviewChart(element_id) {
       const margin = { top: 10, bottom: 120, left: 80, right: 10 };
       const width = 500;
@@ -170,7 +248,6 @@
           }).filter(function (value, index, array) {
             return index <= 10;
           });
-        console.log(nestedStateData)
         var maxLength = d3.max(nestedStateData).value;
 
         yScale.domain([0, maxLength]);
